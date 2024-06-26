@@ -1,3 +1,6 @@
+# revisitingkmers
+This is the repository for the project entitled "Revisiting K-mer Profile for Effective and Scalable Genome Representation Learning"
+
 + In order to get the detailed instructions to run the models, please type
 python linear.py --help or python nonlinear.py
 
