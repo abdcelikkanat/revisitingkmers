@@ -6,8 +6,8 @@ import sys
 import collections
 import numpy as np
 import sklearn.metrics
-from modified_utils import align_labels_via_hungarian_algorithm
-from modified_utils import modified_get_embedding, modified_KMedoid, modified_compute_class_center_medium_similarity
+from evaluation.utils import align_labels_via_hungarian_algorithm
+from evaluation.utils import modified_get_embedding, modified_KMedoid, modified_compute_class_center_medium_similarity
 from datetime import datetime  # --->>>
 
 csv.field_size_limit(sys.maxsize)
@@ -19,7 +19,7 @@ def main(args):
     model_list = args.model_list.split(",")
     for model in model_list:
         for species in args.species.split(","):  # ["reference", "marine", "plant"]: --->>>
-            for sample in ["5"]:  # ["5", "6"]:
+            for sample in ["5", "6"]:
 
                 print(f"Start {model} {species} {sample} binning")
 
@@ -121,12 +121,18 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate clustering')
-    parser.add_argument('--species', type=str, default="reference, marine, plant", help='Species to evaluate')
+    parser.add_argument(
+        '--species', type=str, default="reference, marine, plant", help='Species to evaluate'
+    )
     parser.add_argument('--output', type=str, help='Output file')
-    parser.add_argument('--test_model_dir', type=str, default="/root/trained_model",
-                        help='Directory to save trained models to test')
-    parser.add_argument('--model_list', type=str, default="test",
-                        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, test]')
+    parser.add_argument(
+        '--test_model_dir', type=str, default="/root/trained_model",
+        help='Directory to save trained models to test'
+    )
+    parser.add_argument(
+        '--model_list', type=str, default="test",
+        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, test]'
+    )
     parser.add_argument('--data_dir', type=str, default="/root/data", help='Data directory')
     args = parser.parse_args()
     main(args)

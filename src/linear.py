@@ -212,15 +212,15 @@ if __name__ == "__main__":
     parser.add_argument('--output', type=str, help='Output file')
     args = parser.parse_args()
 
-    kmer2emb = KMer2Emb(
+    lm = LinearModel(
         k=args.k, dim=args.dim,
         lr=args.lr, epoch_num=args.epoch, batch_size=args.batch_size,
         device=torch.device(args.device), verbose=True, seed=args.seed
     )
-    loss = kmer2emb.learn(file_path=args.input, window_size=args.w, read_sample_size=args.read_sample_size)
+    loss = lm.learn(file_path=args.input, window_size=args.w, read_sample_size=args.read_sample_size)
 
     # Save the model
-    kmer2emb.save(args.output)
+    lm.save(args.output)
 
     # Save the loss
     with open(args.output + ".loss", 'w') as f:

@@ -163,3 +163,7 @@ cython_debug/
 
 .DS_Store
 .idea
+*.err
+*.out
+models
+embeddings

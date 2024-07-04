@@ -8,30 +8,22 @@ import os
 from scipy.spatial import distance  # --->>>
 import itertools  # --->>>
 from sklearn.preprocessing import normalize
-import sys
-
-'''
-#MODELS_PATH = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../OURMODELS"))
-MODELS_PATH = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../models/OURMODELS"))
-sys.path.append(MODELS_PATH)
-from kmer2vec_pois import KMer2Emb
-'''
-
+from nonlinear import NonLinearModel
 from scipy.optimize import linear_sum_assignment
 
 
 def modified_get_embedding(
-        dna_sequences, model, species, sample, task_name="clustering", post_fix="", test_model_dir="./test_model"
+        na_sequences, model, species, sample, task_name="clustering", post_fix="", test_model_dir="./test_model"
 ):
     model2filename = {
         "tnf": "tnf.npy", "tnf_k": "tnf_k.npy", "dna2vec": "dna2vec.npy", "hyenadna": "hyenadna.npy",
         "dnabert2": "dnabert2_new.npy", "nt": "nt.npy", "test": "test.npy",
-        "kmer2vec": os.path.basename(test_model_dir) + ".npy", "kmerprofile": os.path.basename(test_model_dir) + ".npy"
+        "nonlinear": os.path.basename(test_model_dir) + ".npy", "kmerprofile": os.path.basename(test_model_dir) + ".npy"
     }
 
     model2batch_size = {
         "tnf": 100, "tnf_k": 100, "dna2vec": 100, "hyenadna": 100, "dnabert2": 20, "nt": 64, "test": 20,
-        "kmer2vec": -1, "kmerprofile": -1
+        "nonlinear": -1, "kmerprofile": -1
     }
     batch_size = model2batch_size[model]
 
@@ -86,24 +78,25 @@ def modified_get_embedding(
             )
             embedding = normalize(embedding)
 
-        elif model == "kmerprofile":
+        elif model == "linear":
 
             embedding = modified_calculate_tnf(dna_sequences, k=4)
 
-        # elif model == "kmer2vec":
-        #
-        #     kwargs, model_state_dict = torch.load(test_model_dir)
-        #     new_model = KMer2Emb(**kwargs)
-        #     new_model.load_state_dict(model_state_dict)
-        #     embedding = new_model.get_emb(dna_sequences)
+        elif model == "nonlinear":
+
+            kwargs, model_state_dict = torch.load(test_model_dir, map_location=torch.device("cpu"))
+            kwargs['device'] = "cpu"
+            nlm = NonLinearModel(**kwargs)
+            nlm.load_state_dict(model_state_dict)
+            embedding = nlm.read2emb(dna_sequences)
 
         else:
             raise ValueError(f"Unknown model {model}")
 
-        if model not in ["bpe", "dna2vec"]:
-            print(f"Save embedding to file {embedding_file}")
-            os.makedirs(embedding_dir, exist_ok=True)
-            np.save(embedding_file, embedding)
+        # if model not in ["bpe", "dna2vec"]:
+        #     print(f"Save embedding to file {embedding_file}")
+        #     os.makedirs(embedding_dir, exist_ok=True)
+        #     np.save(embedding_file, embedding)
 
     return embedding
 
