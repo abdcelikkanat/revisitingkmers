@@ -8,95 +8,100 @@ import os
 from scipy.spatial import distance  # --->>>
 import itertools  # --->>>
 from sklearn.preprocessing import normalize
-from nonlinear import NonLinearModel
+from src.poisson_model import PoissonModel
+from src.nonlinear import NonLinearModel
 from scipy.optimize import linear_sum_assignment
 
 
 def modified_get_embedding(
-        na_sequences, model, species, sample, task_name="clustering", post_fix="", test_model_dir="./test_model"
+        dna_sequences, model, species, sample, task_name="clustering", post_fix="", test_model_dir="./test_model"
 ):
-    model2filename = {
-        "tnf": "tnf.npy", "tnf_k": "tnf_k.npy", "dna2vec": "dna2vec.npy", "hyenadna": "hyenadna.npy",
-        "dnabert2": "dnabert2_new.npy", "nt": "nt.npy", "test": "test.npy",
-        "nonlinear": os.path.basename(test_model_dir) + ".npy", "kmerprofile": os.path.basename(test_model_dir) + ".npy"
-    }
-
+    # model2filename = {
+    #     "tnf": "tnf.npy", "tnf_k": "tnf_k.npy", "dna2vec": "dna2vec.npy", "hyenadna": "hyenadna.npy",
+    #     "dnabert2": "dnabert2_new.npy", "nt": "nt.npy", "test": "test.npy",
+    #     "nonlinear": os.path.basename(test_model_dir) + ".npy", "kmerprofile": os.path.basename(test_model_dir) + ".npy"
+    # }
+    #
     model2batch_size = {
         "tnf": 100, "tnf_k": 100, "dna2vec": 100, "hyenadna": 100, "dnabert2": 20, "nt": 64, "test": 20,
-        "nonlinear": -1, "kmerprofile": -1
+        "nonlinear": -1, "poisson_model": -1, "linear": -1
     }
     batch_size = model2batch_size[model]
+    #
+    # embedding_dir = f"embeddings/{species}/{task_name}_{sample}{post_fix}"
+    # embedding_file = os.path.join(embedding_dir, model2filename[model])
+    # if os.path.exists(embedding_file):
+    #     print(f"Load embedding from file {embedding_file}")
+    #     embedding = np.load(embedding_file)
+    #
+    # else:
+    #     print(f"Calculate embedding for {model} {species} {sample}")
 
-    embedding_dir = f"embeddings/{species}/{task_name}_{sample}{post_fix}"
-    embedding_file = os.path.join(embedding_dir, model2filename[model])
-    if os.path.exists(embedding_file):
-        print(f"Load embedding from file {embedding_file}")
-        embedding = np.load(embedding_file)
+    if model == "tnf":
+        embedding = modified_calculate_tnf(dna_sequences)
+        embedding = normalize(embedding)
+    elif model == "tnf_k":
+        embedding = modified_calculate_tnf(dna_sequences, kernel=True)
+        embedding = normalize(embedding)
+    elif model == "dna2vec":
+        embedding = calculate_dna2vec_embedding(dna_sequences, embedding_dir=None)
+        embedding = normalize(embedding)
+    elif model == "hyenadna":
+        embedding = calculate_llm_embedding(
+            dna_sequences,
+            model_name_or_path="LongSafari/hyenadna-medium-450k-seqlen-hf",
+            model_max_length=20000,
+            batch_size=batch_size
+        )
+        embedding = normalize(embedding)
+    elif model == "dnabert2":
+        embedding = calculate_llm_embedding(
+            dna_sequences,
+            model_name_or_path="zhihan1996/DNABERT-2-117M",
+            model_max_length=5000,
+            batch_size=batch_size
+        )
+        embedding = normalize(embedding)
+    elif model == "nt":
+        embedding = calculate_llm_embedding(
+            dna_sequences,
+            model_name_or_path="InstaDeepAI/nucleotide-transformer-v2-100m-multi-species",
+            model_max_length=2048,
+            batch_size=batch_size
+        )
+        embedding = normalize(embedding)
+    elif model == "test":
+        embedding = calculate_llm_embedding(
+            dna_sequences,
+            model_name_or_path=test_model_dir,
+            model_max_length=5000,
+            batch_size=batch_size
+        )
+        embedding = normalize(embedding)
+
+    elif model == "linear":
+
+        embedding = modified_calculate_tnf(dna_sequences, k=4)
+        embedding = normalize(embedding)
+
+    elif model == "poisson_model":
+
+        kwargs, model_state_dict = torch.load(test_model_dir, map_location=torch.device("cpu"))
+        kwargs['device'] = "cpu"
+        pm = PoissonModel(**kwargs)
+        pm.load_state_dict(model_state_dict)
+        embedding = pm.read2emb(dna_sequences)
+
+    elif model == "nonlinear":
+
+        kwargs, model_state_dict = torch.load(test_model_dir, map_location=torch.device("cpu"))
+        kwargs['device'] = "cpu"
+        nlm = NonLinearModel(**kwargs)
+        nlm.load_state_dict(model_state_dict)
+        embedding = nlm.read2emb(dna_sequences)
 
     else:
-        print(f"Calculate embedding for {model} {species} {sample}")
-
-        if model == "tnf":
-            embedding = modified_calculate_tnf(dna_sequences)
-            embedding = normalize(embedding)
-        elif model == "tnf_k":
-            embedding = modified_calculate_tnf(dna_sequences, kernel=True)
-            embedding = normalize(embedding)
-        elif model == "dna2vec":
-            embedding = calculate_dna2vec_embedding(dna_sequences, embedding_dir=embedding_dir)
-            embedding = normalize(embedding)
-        elif model == "hyenadna":
-            embedding = calculate_llm_embedding(
-                dna_sequences,
-                model_name_or_path="LongSafari/hyenadna-medium-450k-seqlen-hf",
-                model_max_length=20000,
-                batch_size=batch_size
-            )
-            embedding = normalize(embedding)
-        elif model == "dnabert2":
-            embedding = calculate_llm_embedding(
-                dna_sequences,
-                model_name_or_path="zhihan1996/DNABERT-2-117M",
-                model_max_length=5000,
-                batch_size=batch_size
-            )
-            embedding = normalize(embedding)
-        elif model == "nt":
-            embedding = calculate_llm_embedding(
-                dna_sequences,
-                model_name_or_path="InstaDeepAI/nucleotide-transformer-v2-100m-multi-species",
-                model_max_length=2048,
-                batch_size=batch_size
-            )
-            embedding = normalize(embedding)
-        elif model == "test":
-            embedding = calculate_llm_embedding(
-                dna_sequences,
-                model_name_or_path=test_model_dir,
-                model_max_length=5000,
-                batch_size=batch_size
-            )
-            embedding = normalize(embedding)
-
-        elif model == "linear":
-
-            embedding = modified_calculate_tnf(dna_sequences, k=4)
-
-        elif model == "nonlinear":
-
-            kwargs, model_state_dict = torch.load(test_model_dir, map_location=torch.device("cpu"))
-            kwargs['device'] = "cpu"
-            nlm = NonLinearModel(**kwargs)
-            nlm.load_state_dict(model_state_dict)
-            embedding = nlm.read2emb(dna_sequences)
-
-        else:
-            raise ValueError(f"Unknown model {model}")
-
-        # if model not in ["bpe", "dna2vec"]:
-        #     print(f"Save embedding to file {embedding_file}")
-        #     os.makedirs(embedding_dir, exist_ok=True)
-        #     np.save(embedding_file, embedding)
+        raise ValueError(f"Unknown model {model}")
 
     return embedding
 
@@ -175,7 +180,6 @@ def calculate_llm_embedding(dna_sequences, model_name_or_path, model_max_length=
     lengths = [len(seq) for seq in dna_sequences]
     idx = np.argsort(lengths)
     dna_sequences = [dna_sequences[i] for i in idx]
-    print("----> model path: ", model_name_or_path)
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_name_or_path,
         cache_dir=None,
@@ -241,10 +245,19 @@ def calculate_llm_embedding(dna_sequences, model_name_or_path, model_max_length=
     return embeddings
 
 
-def modified_KMedoid(features, min_similarity=0.8, min_bin_size=100, max_iter=300):
+def modified_KMedoid(features, min_similarity=0.8, min_bin_size=100, max_iter=300, metric="dot"):
+
     # rank nodes by the number of neighbors
     features = features.astype(np.float32)
-    similarities = np.exp(-distance.squareform(distance.pdist(features, 'euclidean')))  # np.dot(features, features.T)
+    if metric == "dot":
+        similarities = np.dot(features, features.T)
+    elif metric == "euclidean" or metric == "l2":
+        similarities = np.exp(-distance.squareform(distance.pdist(features, 'euclidean')))
+    elif metric == "l1":
+        similarities = np.exp(-distance.squareform(distance.pdist(features, 'minkowski', p=1.)))
+    else:
+        raise ValueError("Invalid metric!")
+
     # set the values below min_similarity to 0
     similarities[similarities < min_similarity] = 0
 
@@ -266,8 +279,18 @@ def modified_KMedoid(features, min_similarity=0.8, min_bin_size=100, max_iter=30
         # Optimize the current medoid (Line 5-8)
         for t in range(3):
             # For the current medoid, find its similarities
-            similarity = np.exp(
-                -distance.cdist(features, np.expand_dims(current_medoid, axis=0), 'euclidean')).squeeze()
+            if metric == "dot":
+                similarity = np.dot(features, current_medoid)
+            elif metric == "euclidean" or metric == "l2":
+                similarity = np.exp(
+                    -distance.cdist(features, np.expand_dims(current_medoid, axis=0), 'euclidean')
+                ).squeeze()
+            elif metric == "l1":
+                similarity = np.exp(
+                    -distance.cdist(features, np.expand_dims(current_medoid, axis=0), 'minkowski', p=1.)
+                ).squeeze()
+            else:
+                raise ValueError("Invalid metric!")
             # Determine the indices that are within the similarity threshold
             idx_within = similarity >= min_similarity
             # Determine the available indices, i.e. the indices that have not been assigned to a cluster yet
@@ -324,7 +347,7 @@ def align_labels_via_hungarian_algorithm(true_labels, predicted_labels):
     return label_mapping
 
 
-def modified_compute_class_center_medium_similarity(embeddings, labels):
+def modified_compute_class_center_medium_similarity(embeddings, labels, metric="dot"):
     idx = np.argsort(labels)
     embeddings = embeddings[idx]
     labels = labels[idx]
@@ -337,9 +360,18 @@ def modified_compute_class_center_medium_similarity(embeddings, labels):
         start = count
         end = count + n_sample_per_class[i]
         mean = np.mean(embeddings[start:end], axis=0)
-        similarities = np.exp(
-            -distance.cdist(np.expand_dims(mean, axis=0), embeddings[start:end], 'minkowski', p=2.).reshape(
-                -1))  # np.dot(mean, embeddings[start:end].T).reshape(-1)
+        if metric == "dot":
+            similarities = np.dot(mean, embeddings[start:end].T).reshape(-1)
+        elif metric == "euclidean" or metric == "l2":
+            similarities = np.exp(
+                -distance.cdist(np.expand_dims(mean, axis=0), embeddings[start:end], 'minkowski', p=2.).reshape(-1)
+            )
+        elif metric == "l1":
+            similarities = np.exp(
+                -distance.cdist(np.expand_dims(mean, axis=0), embeddings[start:end], 'minkowski', p=1.).reshape(-1)
+            )
+        else:
+            raise ValueError("Invalid metric!")
 
         all_similarities[start:end] = similarities
 

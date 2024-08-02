@@ -16,12 +16,22 @@ max_length = 20000
 
 
 def main(args):
+
     model_list = args.model_list.split(",")
     for model in model_list:
         for species in args.species.split(","):  # ["reference", "marine", "plant"]: --->>>
             for sample in ["5", "6"]:
 
-                print(f"Start {model} {species} {sample} binning")
+                # Define the appropriate metric for the given method
+                if args.metric != None:
+                    metric = args.metric
+                else:
+                    if model == "nonlinear":
+                        metric = "euclidean"
+                    else:
+                        metric = "dot"
+
+                print(f"Model: {model} Species: {species} Sample ID: {sample} Metric: {metric}")
 
                 ###### load clutsering data to compute similarity threshold
                 clustering_data_file = os.path.join(args.data_dir, species, f"clustering_0.tsv")
@@ -42,9 +52,9 @@ def main(args):
                 embedding = modified_get_embedding(
                     dna_sequences, model, species, 0, task_name="clustering", test_model_dir=args.test_model_dir
                 )
-                percentile_values = modified_compute_class_center_medium_similarity(embedding, labels)
+                percentile_values = modified_compute_class_center_medium_similarity(embedding, labels, metric=metric)
                 threshold = percentile_values[-3]
-                print(f"threshold: {threshold}")
+                print(f"Threshold value: {threshold}")
 
                 ###### load binning data
                 data_file = os.path.join(args.data_dir, species, f"binning_{sample}.tsv")
@@ -81,7 +91,9 @@ def main(args):
                     embedding = embedding[np.array(filterd_idx)]
                     raise ValueError("embedding and filterd_idx not match: I GUESS THIS LINE IS NOT NEEDED")
 
-                binning_results = modified_KMedoid(embedding, min_similarity=threshold, min_bin_size=10, max_iter=1000)
+                binning_results = modified_KMedoid(
+                    embedding, min_similarity=threshold, min_bin_size=10, max_iter=1000, metric=metric
+                )
 
                 # Example usage
                 true_labels_bin = labels_bin[binning_results != -1]
@@ -93,9 +105,10 @@ def main(args):
                 predicted_labels_bin = [alignment_bin[label] for label in predicted_labels]
 
                 # Calculate purity, completeness, recall, and ARI
-                recall_bin = sklearn.metrics.recall_score(true_labels_bin, predicted_labels_bin, average=None,
-                                                          zero_division=0)
-                nonzero_bin = len(np.where(recall_bin != 0)[0])
+                recall_bin = sklearn.metrics.recall_score(
+                    true_labels_bin, predicted_labels_bin, average=None, zero_division=0
+                )
+                # nonzero_bin = len(np.where(recall_bin != 0)[0]) # unused line
                 recall_bin.sort()
 
                 f1_bin = sklearn.metrics.f1_score(true_labels_bin, predicted_labels_bin, average=None, zero_division=0)
@@ -122,7 +135,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate clustering')
     parser.add_argument(
-        '--species', type=str, default="reference, marine, plant", help='Species to evaluate'
+        '--species', type=str, default="reference,marine,plant", help='Species to evaluate'
     )
     parser.add_argument('--output', type=str, help='Output file')
     parser.add_argument(
@@ -134,5 +147,8 @@ if __name__ == "__main__":
         help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, test]'
     )
     parser.add_argument('--data_dir', type=str, default="/root/data", help='Data directory')
+    parser.add_argument(
+        '--metric', type=str, default=None, help="Metric to measure the similarities among embeddings"
+    )
     args = parser.parse_args()
     main(args)
