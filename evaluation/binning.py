@@ -50,7 +50,7 @@ def main(args):
 
                 # generate embedding
                 embedding = modified_get_embedding(
-                    dna_sequences, model, species, 0, task_name="clustering", test_model_dir=args.test_model_dir
+                    dna_sequences, model, species, 0, k=args.k, task_name="clustering", test_model_dir=args.test_model_dir
                 )
                 percentile_values = modified_compute_class_center_medium_similarity(embedding, labels, metric=metric)
                 threshold = percentile_values[-3]
@@ -144,9 +144,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--model_list', type=str, default="test",
-        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, test]'
+        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, test, kmerprofile]'
     )
     parser.add_argument('--data_dir', type=str, default="/root/data", help='Data directory')
+    parser.add_argument(
+        '--k', type=int, default=4, help="k Value for the kmerporfile method"
+    )
     parser.add_argument(
         '--metric', type=str, default=None, help="Metric to measure the similarities among embeddings"
     )

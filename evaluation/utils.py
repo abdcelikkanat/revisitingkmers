@@ -14,7 +14,7 @@ from scipy.optimize import linear_sum_assignment
 
 
 def modified_get_embedding(
-        dna_sequences, model, species, sample, task_name="clustering", post_fix="", test_model_dir="./test_model"
+        dna_sequences, model, species, sample, k=4, task_name="clustering", post_fix="", test_model_dir="./test_model"
 ):
     # model2filename = {
     #     "tnf": "tnf.npy", "tnf_k": "tnf_k.npy", "dna2vec": "dna2vec.npy", "hyenadna": "hyenadna.npy",
@@ -24,6 +24,7 @@ def modified_get_embedding(
     #
     model2batch_size = {
         "tnf": 100, "tnf_k": 100, "dna2vec": 100, "hyenadna": 100, "dnabert2": 20, "nt": 64, "test": 20,
+        "kmerprofile": -1,
         "nonlinear": -1, "poisson_model": -1, "linear": -1
     }
     batch_size = model2batch_size[model]
@@ -77,6 +78,11 @@ def modified_get_embedding(
             model_max_length=5000,
             batch_size=batch_size
         )
+        embedding = normalize(embedding)
+
+    elif model == "kmerprofile":
+
+        embedding = modified_calculate_tnf(dna_sequences, k=k)
         embedding = normalize(embedding)
 
     elif model == "linear":
