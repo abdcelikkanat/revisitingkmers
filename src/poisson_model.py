@@ -170,7 +170,7 @@ class PoissonModel(torch.nn.Module):
 
         torch.save([kwargs, self.state_dict()], file_path)
 
-    def get_emb(self, sequences):
+    def read2emb(self, sequences):
 
         embeddings = []
         for sequence in sequences:
