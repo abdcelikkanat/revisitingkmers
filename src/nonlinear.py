@@ -218,7 +218,7 @@ def single_epoch(model, loss_func, optimizer, training_loader):
     return epoch_loss / len(training_loader)
 
 
-def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=None, verbose=True):
+def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=None, checkpoint=0, verbose=True):
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
@@ -248,16 +248,15 @@ def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=No
             writer.add_scalar('Loss/train', avg_loss, epoch + 1)
             writer.flush()
 
-        if (epoch + 1) % 10 == 0:
-            if model_save_path is not None:
+        if model_save_path is not None and checkpoint > 0 and (epoch + 1) % checkpoint == 0:
 
-                # model_save_path contains the substring epoch=ID, so change the ID to the current epoch
-                temp_model_save_path = re.sub('epoch.*_LR', f"epoch={epoch + 1}_LR", model_save_path)
+            # model_save_path contains the substring epoch=ID, so change the ID to the current epoch
+            temp_model_save_path = re.sub('epoch.*_LR', f"epoch={epoch + 1}_LR", model_save_path)
 
-                torch.save([{'k': model.get_k(), 'device': model.get_device()}, model.state_dict()], temp_model_save_path)
-                if verbose:
-                    print(f"Model is saving.")
-                    print(f"\t- Target path: {temp_model_save_path}")
+            torch.save([{'k': model.get_k(), 'device': model.get_device()}, model.state_dict()], temp_model_save_path)
+            if verbose:
+                print(f"Model is saving.")
+                print(f"\t- Target path: {temp_model_save_path}")
 
     writer.close()
 
@@ -282,6 +281,7 @@ if __name__ == "__main__":
     parser.add_argument('--workers_num', type=int, default=1, help='Number of workers for data loader')
     parser.add_argument('--output', type=str, help='Output file')
     parser.add_argument('--seed', type=int, default=26042024, help='Seed for random number generator')
+    parser.add_argument('--checkpoint', type=int, default=0, help='Save the model for every checkpoint epoch')
     args = parser.parse_args()
 
     # Define the model
@@ -301,4 +301,4 @@ if __name__ == "__main__":
     )
 
     # Run the model
-    run(model, args.lr, args.epoch, args.output, args.output + ".loss", verbose=True)
+    run(model, args.lr, args.epoch, args.output, args.output + ".loss", args.checkpoint, verbose=True)
