@@ -96,7 +96,7 @@ class PoissonModel(torch.nn.Module):
                 line_id += 1
 
         # Add the upper triangular matrix to the lower triangular matrix
-        return counts[np.triu_indices(4**self.__k, k=1)]
+        return counts[np.triu_indices(4**self.__k, k=1)] / (2*read_sample_size)
     def __compute_loss(self, pairs, counts):
 
         dist = torch.norm(
