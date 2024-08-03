@@ -28,9 +28,6 @@ class PoissonModel(torch.nn.Module):
         self.__letters = ['A', 'C', 'G', 'T']
         self.__kmer2id = {''.join(kmer): idx for idx, kmer in enumerate(itertools.product(self.__letters, repeat=k))}
 
-        self.__bias = torch.nn.Parameter(
-            2 * torch.rand(size=(4**self.__k, ), device=self.__device) - 1, requires_grad=True
-        )
         self.__embs = torch.nn.Parameter(
             2 * torch.rand(size=(4**self.__k, self.__dim), device=self.__device) - 1, requires_grad=True
         )
@@ -41,7 +38,6 @@ class PoissonModel(torch.nn.Module):
     def set_device(self, device):
 
         self.__device = device
-        self.__bias = self.__bias.to(device)
         self.__embs = self.__embs.to(device)
     def __set_seed(self, seed=None):
 
@@ -61,6 +57,9 @@ class PoissonModel(torch.nn.Module):
 
         # Initialize the counts
         counts = np.zeros(shape=(4 ** self.__k, 4 ** self.__k), dtype=float)
+
+        if read_sample_size <= 0:
+            read_sample_size = num_lines
 
         # Sample 'read_sample_size' lines and sort them
         indices = random.sample(range(num_lines), read_sample_size)
@@ -103,8 +102,7 @@ class PoissonModel(torch.nn.Module):
             torch.index_select(self.__embs, 0, pairs[0]) - torch.index_select(self.__embs, 0, pairs[1]),
             p=1, dim=1
         )
-        beta_sum = 0
-        log_rate = beta_sum - dist
+        log_rate = - dist
 
         return -(counts * log_rate - torch.exp(log_rate)).sum()
 
