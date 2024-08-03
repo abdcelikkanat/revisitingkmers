@@ -8,8 +8,7 @@ import argparse
 
 class PoissonModel(torch.nn.Module):
 
-    def __init__(self,  k, dim=2,
-                 lr=0.1, epoch_num=100, batch_size = 1000,
+    def __init__(self,  k, dim=2, lr=0.1, epoch_num=100, batch_size = 1000,
                  device=torch.device("cpu"), verbose=False, seed=0):
 
         super(PoissonModel, self).__init__()
@@ -39,6 +38,7 @@ class PoissonModel(torch.nn.Module):
 
         self.__device = device
         self.__embs = self.__embs.to(device)
+
     def __set_seed(self, seed=None):
 
         if seed is not None:
@@ -69,23 +69,25 @@ class PoissonModel(torch.nn.Module):
         with open(file_path, 'r') as f:
             current_id_pos = 0
             line_id = 0
-            for read in f:
+            for line in f:
                 # Remove the newline character and commas
-                read = read.strip().replace(',', '')
+                left_read, right_read = line.strip().split(',')
+
                 if line_id == indices[current_id_pos]:
 
-                    # Get the center
-                    for i in range(len(read) - self.__k + 1):
-                        center_kmer_id = self.__kmer2id[read[i:i+self.__k]]
-                        # Get the context
-                        for j in range(max(0, i - window_size), min(len(read) - self.__k + 1, i + window_size + 1)):
-                            if j == i:
-                                continue
-                            context_kmer_id = self.__kmer2id[read[j:j+self.__k]]
+                    for read in [left_read, right_read]:
+                        # Get the center
+                        for i in range(len(read) - self.__k + 1):
+                            center_kmer_id = self.__kmer2id[read[i:i+self.__k]]
+                            # Get the context
+                            for j in range(max(0, i - window_size), min(len(read) - self.__k + 1, i + window_size + 1)):
+                                if j == i:
+                                    continue
+                                context_kmer_id = self.__kmer2id[read[j:j+self.__k]]
 
-                            if center_kmer_id <= context_kmer_id:
-                                # Update the counts
-                                counts[center_kmer_id, context_kmer_id] += 1
+                                if center_kmer_id <= context_kmer_id:
+                                    # Update the counts
+                                    counts[center_kmer_id, context_kmer_id] += 1
 
                     # Increment the current_id_pos to go to the next selected line
                     current_id_pos += 1
@@ -96,6 +98,7 @@ class PoissonModel(torch.nn.Module):
 
         # Add the upper triangular matrix to the lower triangular matrix
         return counts[np.triu_indices(4**self.__k, k=1)] / (2*read_sample_size)
+
     def __compute_loss(self, pairs, counts):
 
         dist = torch.norm(
@@ -168,7 +171,7 @@ class PoissonModel(torch.nn.Module):
 
         torch.save([kwargs, self.state_dict()], file_path)
 
-    def read2emb(self, sequences):
+    def get_emb(self, sequences):
 
         embeddings = []
         for sequence in sequences:
@@ -183,24 +186,23 @@ class PoissonModel(torch.nn.Module):
             kmer_profile = kmer_profile / torch.norm(kmer_profile, p=1)
 
             emb = kmer_profile @ self.__embs
+            # emb = emb / (len(sequence) - self.__k + 1)
             embeddings.append(emb.detach().numpy())
 
         return np.asarray(embeddings)
 
-
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description='Evaluate clustering')
     parser.add_argument('--input', type=str, help='Input sequence file')
     parser.add_argument('--k', type=int, default=2, help='k value')
     parser.add_argument('--dim', type=int, default=2, help='Dimension of k-mer embedding')
-    parser.add_argument('--w', type=int, default=2, help='Window size')
     parser.add_argument('--epoch', type=int, default=1000, help='Epoch number')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--batch_size', type=int, default=0, help='Batch size (0: no batch)')
-    parser.add_argument('--read_sample_size', type=int, default=10000, help='Read sample size')
     parser.add_argument('--device', type=str, default="cpu", help='Device (cpu or cuda)')
     parser.add_argument('--seed', type=int, default=26042024, help='Seed for random number generator')
+    parser.add_argument('--w', type=int, default=2, help='Window size')
+    parser.add_argument('--read_sample_size', type=int, default=100000, help='Read sample size')
     parser.add_argument('--output', type=str, help='Output file')
     args = parser.parse_args()
 
@@ -218,4 +220,3 @@ if __name__ == "__main__":
     with open(args.output + ".loss", 'w') as f:
         for l in loss:
             f.write(f"{l}\n")
-

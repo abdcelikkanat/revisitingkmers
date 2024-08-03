@@ -75,23 +75,25 @@ class KMer2Emb(torch.nn.Module):
         with open(file_path, 'r') as f:
             current_id_pos = 0
             line_id = 0
-            for read in f:
+            for line in f:
                 # Remove the newline character and commas
-                read = read.strip().replace(',', '')
+                left_read, right_read = line.strip().split(',')
+
                 if line_id == indices[current_id_pos]:
 
-                    # Get the center
-                    for i in range(len(read) - self.__k + 1):
-                        center_kmer_id = self.__kmer2id[read[i:i + self.__k]]
-                        # Get the context
-                        for j in range(max(0, i - window_size), min(len(read) - self.__k + 1, i + window_size + 1)):
-                            if j == i:
-                                continue
-                            context_kmer_id = self.__kmer2id[read[j:j + self.__k]]
+                    for read in [left_read, right_read]:
+                        # Get the center
+                        for i in range(len(read) - self.__k + 1):
+                            center_kmer_id = self.__kmer2id[read[i:i+self.__k]]
+                            # Get the context
+                            for j in range(max(0, i - window_size), min(len(read) - self.__k + 1, i + window_size + 1)):
+                                if j == i:
+                                    continue
+                                context_kmer_id = self.__kmer2id[read[j:j+self.__k]]
 
-                            if center_kmer_id <= context_kmer_id:
-                                # Update the counts
-                                counts[center_kmer_id, context_kmer_id] += 1
+                                if center_kmer_id <= context_kmer_id:
+                                    # Update the counts
+                                    counts[center_kmer_id, context_kmer_id] += 1
 
                     # Increment the current_id_pos to go to the next selected line
                     current_id_pos += 1
@@ -101,7 +103,7 @@ class KMer2Emb(torch.nn.Module):
                 line_id += 1
 
         # Add the upper triangular matrix to the lower triangular matrix
-        return counts[np.triu_indices(4 ** self.__k, k=1)] / (2 * read_sample_size)
+        return counts[np.triu_indices(4**self.__k, k=1)] / (2*read_sample_size)
 
     def __compute_loss(self, pairs, counts):
 
