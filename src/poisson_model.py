@@ -171,7 +171,7 @@ class PoissonModel(torch.nn.Module):
 
         torch.save([kwargs, self.state_dict()], file_path)
 
-    def get_emb(self, sequences):
+    def read2emb(self, sequences):
 
         embeddings = []
         for sequence in sequences:
@@ -186,7 +186,6 @@ class PoissonModel(torch.nn.Module):
             kmer_profile = kmer_profile / torch.norm(kmer_profile, p=1)
 
             emb = kmer_profile @ self.__embs
-            # emb = emb / (len(sequence) - self.__k + 1)
             embeddings.append(emb.detach().numpy())
 
         return np.asarray(embeddings)
