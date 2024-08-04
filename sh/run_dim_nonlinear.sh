@@ -32,7 +32,7 @@ CHECKPOINT=0
 
 # Define the output path
 OUTPUT_PATH=${BASEFOLDER}/models/${MODELNAME}_train_2m_k=${K}_d=${DIM}_negsampleperpos=${NEGSAMPLEPERPOS}
-OUTPUT_PATH=${OUTPUT_PATH}_epoch=${EPOCHNUM}_LR=${LR}_batch=${BATCH_SIZE}_maxread=${MAXREADNUM}${POSTFIX}.model
+OUTPUT_PATH=${OUTPUT_PATH}_epoch=${EPOCHNUM}_LR=${LR}_batch=${BATCH_SIZE}_maxread=${MAXREADNUM}_seed=${SEED}${POSTFIX}.model
 
 # Define the command
 CMD="$PYTHON ${SCRIPT_PATH} --input $INPUT_PATH --k ${K} --epoch $EPOCHNUM --lr $LR"
