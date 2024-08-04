@@ -27,6 +27,7 @@ LR=0.001
 NEGSAMPLEPERPOS=200
 BATCH_SIZE=10000
 MAXREADNUM=100000 
+CHECKPOINT=0
 
 # Define the output path
 OUTPUT_PATH=${BASEFOLDER}/models/${MODELNAME}_train_2m_k=${K}_d=${DIM}_negsampleperpos=${NEGSAMPLEPERPOS}
@@ -35,7 +36,7 @@ OUTPUT_PATH=${OUTPUT_PATH}_epoch=${EPOCHNUM}_LR=${LR}_batch=${BATCH_SIZE}_maxrea
 # Define the command
 CMD="$PYTHON ${SCRIPT_PATH} --input $INPUT_PATH --k ${K} --epoch $EPOCHNUM --lr $LR"
 CMD="${CMD} --neg_sample_per_pos ${NEGSAMPLEPERPOS} --max_read_num ${MAXREADNUM}"
-CMD="${CMD} --batch_size ${BATCH_SIZE} --device cuda --output ${OUTPUT_PATH}"
+CMD="${CMD} --batch_size ${BATCH_SIZE} --device cuda --output ${OUTPUT_PATH} --checkpoint ${CHECKPOINT}"
 
 # Run the command
 echo ${OUTPUT_PATH}
