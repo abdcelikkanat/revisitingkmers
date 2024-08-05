@@ -102,7 +102,7 @@ class PairDataset(Dataset):
 
 
 class NonLinearModel(torch.nn.Module):
-    def __init__(self, k, device=torch.device("cpu"), verbose=False, seed=0):
+    def __init__(self, k, dim=256, device=torch.device("cpu"), verbose=False, seed=0):
         super(NonLinearModel, self).__init__()
 
         # Set the parameters
@@ -111,6 +111,7 @@ class NonLinearModel(torch.nn.Module):
 
         # Define the letters, k-mer size, and the base complement
         self.__k = k
+        self.__dim = dim
         self.__letters = ['A', 'C', 'G', 'T']
         self.__kmer2id = {''.join(kmer): i for i, kmer in enumerate(itertools.product(self.__letters, repeat=self.__k))}
         self.__kmers_num = len(self.__kmer2id)
@@ -123,11 +124,7 @@ class NonLinearModel(torch.nn.Module):
         self.batch1 = torch.nn.BatchNorm1d(512, dtype=torch.float, device=self.__device)
         self.activation1 = torch.nn.Sigmoid()
         self.dropout1 = torch.nn.Dropout(0.2)
-        self.linear2 = torch.nn.Linear(512, 256, dtype=torch.float, device=self.__device)
-        self.batch2 = torch.nn.BatchNorm1d(128, dtype=torch.float, device=self.__device)
-        self.activation2 = torch.nn.Sigmoid()
-        self.dropout2 = torch.nn.Dropout(0.2)
-        self.linear3 = torch.nn.Linear(128, 64, dtype=torch.float, device=self.__device)
+        self.linear2 = torch.nn.Linear(512, self.__dim, dtype=torch.float, device=self.__device)
 
         self.bce_loss = torch.nn.BCELoss()
 
@@ -138,10 +135,6 @@ class NonLinearModel(torch.nn.Module):
         output = self.activation1(output)
         output = self.dropout1(output)
         output = self.linear2(output)
-        # output = self.batch2(output)
-        # output = self.activation2(output)
-        # # output = self.dropout2(output)
-        # output = self.linear3(output)
 
         return output
 
@@ -272,6 +265,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate clustering')
     parser.add_argument('--input', type=str, help='Input sequence file')
     parser.add_argument('--k', type=int, default=2, help='k value')
+    parser.add_argument('--dim', type=int, default=256, help='dimension value')
     parser.add_argument('--neg_sample_per_pos', type=int, default=1000, help='Negative sample ratio')
     parser.add_argument('--max_read_num', type=int, default=10000, help='Maximum number of reads to get from the file')
     parser.add_argument('--epoch', type=int, default=1000, help='Epoch number')
@@ -286,7 +280,7 @@ if __name__ == "__main__":
 
     # Define the model
     model = NonLinearModel(
-        k=args.k, device=torch.device(args.device), verbose=True, seed=args.seed
+        k=args.k, dim=args.dim, device=torch.device(args.device), verbose=True, seed=args.seed
     )
 
     # Read the dataset
