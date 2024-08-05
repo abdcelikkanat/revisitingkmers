@@ -85,7 +85,7 @@ def main(args):
 
                 # generate embedding
                 embedding = modified_get_embedding(
-                    dna_sequences, model, species, sample, task_name="binning", test_model_dir=args.test_model_dir
+                    dna_sequences, model, species, sample,  k=args.k, task_name="binning", test_model_dir=args.test_model_dir
                 )
                 if len(embedding) > len(filterd_idx):
                     embedding = embedding[np.array(filterd_idx)]
