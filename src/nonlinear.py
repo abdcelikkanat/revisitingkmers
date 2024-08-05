@@ -147,6 +147,9 @@ class NonLinearModel(torch.nn.Module):
     def get_k(self):
         return self.__k
 
+    def get_dim(self):
+        return self.__dim
+
     def get_device(self):
         return self.__device
 
@@ -254,7 +257,7 @@ def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=No
     writer.close()
 
     if model_save_path is not None:
-        torch.save([{'k': model.get_k(), 'device': model.get_device()},model.state_dict()], model_save_path)
+        torch.save([{'k': model.get_k(), 'dim': model.get_dim(), 'device': model.get_device()},model.state_dict()], model_save_path)
 
         if verbose:
             print(f"Model is saving.")
