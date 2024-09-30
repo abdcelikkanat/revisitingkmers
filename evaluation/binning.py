@@ -20,7 +20,7 @@ def main(args):
     model_list = args.model_list.split(",")
     for model in model_list:
         for species in args.species.split(","):  # ["reference", "marine", "plant"]: --->>>
-            for sample in ["5", "6"]:
+            for sample in map(int, args.samples.split(",")):
 
                 # Define the appropriate metric for the given method
                 if args.metric != None:
@@ -52,6 +52,7 @@ def main(args):
                 embedding = modified_get_embedding(
                     dna_sequences, model, species, 0, k=args.k, task_name="clustering", test_model_dir=args.test_model_dir
                 )
+
                 percentile_values = modified_compute_class_center_medium_similarity(embedding, labels, metric=metric)
                 threshold = percentile_values[-3]
                 print(f"Threshold value: {threshold}")
@@ -89,8 +90,8 @@ def main(args):
                 )
                 if len(embedding) > len(filterd_idx):
                     embedding = embedding[np.array(filterd_idx)]
+                    ## TODO: CHECK
                     raise ValueError("embedding and filterd_idx not match: I GUESS THIS LINE IS NOT NEEDED")
-
                 binning_results = modified_KMedoid(
                     embedding, min_similarity=threshold, min_bin_size=10, max_iter=1000, metric=metric
                 )
@@ -137,14 +138,17 @@ if __name__ == "__main__":
     parser.add_argument(
         '--species', type=str, default="reference,marine,plant", help='Species to evaluate'
     )
+    parser.add_argument(
+        '--samples', type=str, default="5,6", help='Species to evaluate'
+    )
     parser.add_argument('--output', type=str, help='Output file')
     parser.add_argument(
         '--test_model_dir', type=str, default="/root/trained_model",
         help='Directory to save trained models to test'
     )
     parser.add_argument(
-        '--model_list', type=str, default="test",
-        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, test, kmerprofile]'
+        '--model_list', type=str, default="dnaberts",
+        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, dnarberts, kmerprofile]'
     )
     parser.add_argument('--data_dir', type=str, default="/root/data", help='Data directory')
     parser.add_argument(
