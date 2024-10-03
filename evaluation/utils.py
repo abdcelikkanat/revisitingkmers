@@ -51,11 +51,9 @@ def get_embedding(
         elif model_name == "tnf_k":
 
             embedding = calculate_tnf(dna_sequences, kernel=True)
-            embedding = normalize(embedding, metric='l2')
+            embedding = normalize(embedding, norm='l2')
 
         elif model_name == "hyenadna":
-
-            norm = 'l2' if metric is None else metric
 
             embedding = calculate_llm_embedding(
                 dna_sequences,
@@ -63,40 +61,37 @@ def get_embedding(
                 model_max_length=20000,
                 batch_size=batch_size
             )
-            embedding = normalize(embedding, norm=norm)
+            embedding = normalize(embedding, norm='l2')
 
         elif model_name == "dnabert2":
 
-            norm = 'l2' if metric is None else metric
             embedding = calculate_llm_embedding(
                 dna_sequences,
                 model_name_or_path="zhihan1996/DNABERT-2-117M",
                 model_max_length=5000,
                 batch_size=batch_size
             )
-            embedding = normalize(embedding, norm=norm)
+            embedding = normalize(embedding, norm='l2')
 
         elif model_name == "nt":
 
-            norm = 'l2' if metric is None else metric
             embedding = calculate_llm_embedding(
                 dna_sequences,
                 model_name_or_path="InstaDeepAI/nucleotide-transformer-v2-100m-multi-species",
                 model_max_length=2048,
                 batch_size=batch_size
             )
-            embedding = normalize(embedding, metric=norm)
+            embedding = normalize(embedding, norm='l2')
 
         elif model_name == "dnaberts":
 
-            norm = 'l2' if metric is None else metric
             embedding = calculate_llm_embedding(
                 dna_sequences,
                 model_name_or_path=test_model_dir,
                 model_max_length=5000,
                 batch_size=batch_size
             )
-            embedding = normalize(embedding, norm=norm)
+            embedding = normalize(embedding, norm='l2')
 
         elif model_name == "kmerprofile":
 
