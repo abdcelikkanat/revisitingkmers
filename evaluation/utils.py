@@ -45,15 +45,13 @@ def get_embedding(
 
         if model_name == "tnf":
 
-            norm = 'l2' if metric is None else metric
             embedding = calculate_tnf(dna_sequences)
-            embedding = normalize(embedding, norm=norm)
+            embedding = normalize(embedding, norm='l2')
 
         elif model_name == "tnf_k":
 
-            norm = 'l2' if metric is None else metric
             embedding = calculate_tnf(dna_sequences, kernel=True)
-            embedding = normalize(embedding, metric=norm)
+            embedding = normalize(embedding, metric='l2')
 
         elif model_name == "hyenadna":
 
