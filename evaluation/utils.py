@@ -175,13 +175,13 @@ def calculate_llm_embedding(dna_sequences, model_name_or_path, model_max_length=
         model = transformers.AutoModelForMaskedLM.from_pretrained(
             model_name_or_path,
             trust_remote_code=True,
-            device_map='cuda' if torch.cuda.device_count() else 'cpu'
+            device_map='cpu'
         )
     else:
         model = transformers.AutoModel.from_pretrained(
             model_name_or_path,
             trust_remote_code=True,
-            device_map='cuda' if torch.cuda.device_count() else 'cpu'
+            device_map='cpu'
         )
 
     n_gpu = torch.cuda.device_count()
