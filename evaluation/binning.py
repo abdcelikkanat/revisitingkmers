@@ -157,7 +157,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--model_list', type=str, default="dnaberts",
-        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, dnarberts, kmerprofile]'
+        help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, dnarberts, kmerprofile, poisson, nonlinear]'
     )
     parser.add_argument('--data_dir', type=str, default=None, help='Data directory')
     parser.add_argument(

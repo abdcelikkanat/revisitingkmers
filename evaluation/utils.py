@@ -106,7 +106,7 @@ def get_embedding(
             embedding = calculate_tnf(dna_sequences, k=k)
             embedding = normalize(embedding, norm=norm)
 
-        elif model_name == "poisson_model":
+        elif model_name == "poisson":
 
             kwargs, model_state_dict = torch.load(test_model_dir, map_location=torch.device("cpu"))
             kwargs['device'] = "cpu"
