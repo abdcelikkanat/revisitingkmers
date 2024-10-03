@@ -1,4 +1,4 @@
-# This script has been written based on the file at the following address:
+# This script has been adapted from the file available at the following address:
 # https://github.com/MAGICS-LAB/DNABERT_S/blob/main/evaluate/eval_binning.py
 import numpy as np
 import transformers
@@ -7,8 +7,8 @@ import torch.utils.data as util_data
 import torch.nn as nn
 import tqdm
 import os
-from scipy.spatial import distance  # --->>>
-import itertools  # --->>>
+from scipy.spatial import distance
+import itertools
 from sklearn.preprocessing import normalize
 from src.poisson_model import PoissonModel
 from src.nonlinear import NonLinearModel

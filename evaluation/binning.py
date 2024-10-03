@@ -1,4 +1,4 @@
-# This script has been written based on the file at the following address:
+# This script has been adapted from the file available at the following address:
 # https://github.com/MAGICS-LAB/DNABERT_S/blob/main/evaluate/eval_binning.py
 import csv
 import argparse
@@ -17,8 +17,8 @@ MAX_SEQ_LEN = 20000
 MIN_SEQ_LEN = 2500
 MIN_ABUNDANCE_VALUE = 10
 
-def main(args):
 
+def main(args):
     model_list = args.model_list.split(",")
     for model_name in model_list:
         for species in args.species.split(","):
@@ -63,7 +63,7 @@ def main(args):
                 threshold = percentile_values[-3]
                 print(f"Threshold value: {threshold}")
 
-                ###### load binning data
+                # Load binning data
                 data_file = os.path.join(args.data_dir, species, f"binning_{sample}.tsv")
 
                 with open(data_file, "r") as f:
@@ -90,21 +90,19 @@ def main(args):
                 num_clusters = len(label2id)
                 print(f"Get {len(dna_sequences)} sequences, {num_clusters} clusters")
 
-                # generate embedding
+                # Generate embeddings for the binning set
                 embedding = get_embedding(
-                    dna_sequences, model_name, species, sample,  k=args.k, metric=metric,
+                    dna_sequences, model_name, species, sample, k=args.k, metric=metric,
                     task_name="binning", test_model_dir=args.test_model_dir
                 )
-                if len(embedding) > len(filterd_idx):
-                    embedding = embedding[np.array(filterd_idx)]
-                    ## TODO: CHECK
-                    raise ValueError("embedding and filterd_idx not match: I GUESS THIS LINE IS NOT NEEDED")
+
+                # Run the KMedoid algorithm
                 binning_results = KMedoid(
                     embedding, min_similarity=threshold, min_bin_size=10,
                     max_iter=1000, metric=metric, scalable=args.scalable
                 )
 
-                # Example usage
+                # Get the number of true labels and predictied labels
                 true_labels_bin = labels_bin[binning_results != -1]
                 predicted_labels = binning_results[binning_results != -1]
                 print("Number of predicted labels: ", len(predicted_labels))
@@ -131,13 +129,13 @@ def main(args):
                 print(f"f1_results: {f1_results}")
                 print(f"recall_results: {recall_results} \n")
 
-                with open(args.output, 'a+') as f:  # --->>>
+                with open(args.output, 'a+') as f:
                     f.write("\n")
                     f.write(datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
-                    f.write(f"model: {model_name}, species: {species}, sample: {sample}, binning\n")  # --->>>
-                    f.write(f"recall_results: {recall_results}\n")  # --->>>
-                    f.write(f"f1_results: {f1_results}\n")  # --->>>
-                    f.write(f"threshold: {threshold}\n\n")  # --->>>
+                    f.write(f"model: {model_name}, species: {species}, sample: {sample}, binning\n")
+                    f.write(f"recall_results: {recall_results}\n")
+                    f.write(f"f1_results: {f1_results}\n")
+                    f.write(f"threshold: {threshold}\n\n")
 
 
 if __name__ == "__main__":
@@ -161,7 +159,7 @@ if __name__ == "__main__":
         '--model_list', type=str, default="dnaberts",
         help='List of models to evaluate, separated by comma. Currently support [tnf, tnf-k, dnabert2, hyenadna, nt, dnarberts, kmerprofile]'
     )
-    parser.add_argument('--data_dir', type=str, default="/root/data", help='Data directory')
+    parser.add_argument('--data_dir', type=str, default=None, help='Data directory')
     parser.add_argument(
         '--k', type=int, default=4,
         help="k Value for the kmerprofile method"
