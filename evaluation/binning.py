@@ -56,7 +56,7 @@ def main(args):
                 # Get embeddings
                 embedding = get_embedding(
                     dna_sequences=dna_sequences, model_name=model_name, species=species, sample=0,
-                    k=args.k, task_name="clustering", test_model_dir=args.test_model_dir
+                    k=args.k, task_name="clustering", test_model_dir=args.test_model_dir, suffix=args.suffix,
                 )
 
                 percentile_values = compute_class_center_medium_similarity(embedding, labels, metric=metric)
@@ -93,7 +93,7 @@ def main(args):
                 # Generate embeddings for the binning set
                 embedding = get_embedding(
                     dna_sequences, model_name, species, sample, k=args.k, metric=metric,
-                    task_name="binning", test_model_dir=args.test_model_dir
+                    task_name="binning", test_model_dir=args.test_model_dir, suffix=args.suffix,
                 )
 
                 # Run the KMedoid algorithm
@@ -171,6 +171,10 @@ if __name__ == "__main__":
     parser.add_argument(
         '--scalable', type=bool, default=0,
         help="Controls how we compute the similarity among embeddings"
+    )
+    parser.add_argument(
+        '--suffix', type=str, default="",
+        help="Suffix to add to the output embedding file"
     )
     args = parser.parse_args()
     main(args)

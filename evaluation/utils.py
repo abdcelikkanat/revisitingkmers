@@ -22,7 +22,7 @@ MODEL2BATCH_SIZE = {
 
 def get_embedding(
         dna_sequences, model_name, species, sample, k=4,
-        metric=None, task_name="clustering", test_model_dir=None, post_fix=""
+        metric=None, task_name="clustering", test_model_dir=None, suffix=""
 ):
     #
     # model2batch_size = {
@@ -32,7 +32,7 @@ def get_embedding(
     batch_size = 10  # MODEL2BATCH_SIZE[model_name]
 
     # Define the embedding directory and path
-    embedding_file_dir = os.path.join("embeddings", species, f"{task_name}_{sample}{post_fix}")
+    embedding_file_dir = os.path.join("embeddings", species, f"{task_name}_{sample}{suffix}")
     embedding_file_path = os.path.join(embedding_file_dir, f"{model_name}.npy")
 
     # Load the embedding file if it exits
