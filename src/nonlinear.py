@@ -199,7 +199,7 @@ def loss_func(left_embeddings, right_embeddings, labels, name="bern"):
         raise ValueError(f"Unknown loss function: {name}")
 
 
-def single_epoch(model, loss_func, optimizer, training_loader, loss_name=bern):
+def single_epoch(model, loss_func, optimizer, training_loader, loss_name="bern"):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     epoch_loss = 0.
