@@ -176,14 +176,30 @@ class NonLinearModel(torch.nn.Module):
 
         return embs
 
-def loss_func(left_embeddings, right_embeddings, labels):
+def loss_func(left_embeddings, right_embeddings, labels, name="bern"):
 
-    p = torch.exp(-torch.norm(left_embeddings - right_embeddings, p=2, dim=1)**2 )
+    if name == "bern":
+        p = torch.exp(-torch.norm(left_embeddings - right_embeddings, p=2, dim=1)**2 )
 
-    return torch.nn.functional.binary_cross_entropy(p, labels, reduction='mean')
+        return torch.nn.functional.binary_cross_entropy(p, labels, reduction='mean')
+
+    elif name == "poisson":
+
+        log_lambda = -torch.norm(left_embeddings - right_embeddings, p=2, dim=1)**2
+
+        return torch.mean(-(labels * log_lambda) + torch.exp(log_lambda))
+
+    elif name == "hinge":
+
+        d = torch.norm(left_embeddings - right_embeddings, p=2, dim=1)
+        return torch.mean(labels * (d**2) + (1 - labels) * torch.nn.functional.relu(1 - d)**2)
+
+    else:
+
+        raise ValueError(f"Unknown loss function: {name}")
 
 
-def single_epoch(model, loss_func, optimizer, training_loader):
+def single_epoch(model, loss_func, optimizer, training_loader, loss_name=bern):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     epoch_loss = 0.
@@ -200,7 +216,7 @@ def single_epoch(model, loss_func, optimizer, training_loader):
         left_output, right_output = model(left_kmer_profile, right_kmer_profile)
 
         # Compute the loss and backpropagate
-        batch_loss = loss_func(left_output, right_output, labels)
+        batch_loss = loss_func(left_output, right_output, labels, name=loss_name)
         batch_loss.backward()
 
         # Update the model parameters
@@ -214,7 +230,7 @@ def single_epoch(model, loss_func, optimizer, training_loader):
     return epoch_loss / len(training_loader)
 
 
-def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=None, checkpoint=0, verbose=True):
+def run(model, learning_rate, epoch_num, loss_name="bern", model_save_path=None, loss_file_path=None, checkpoint=0, verbose=True):
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
@@ -235,7 +251,7 @@ def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=No
 
         # Make sure gradient tracking is on, and do a pass over the data
         model.train(True)
-        avg_loss = single_epoch(model, loss_func, optimizer, training_loader)
+        avg_loss = single_epoch(model, loss_func, optimizer, training_loader, loss_name)
 
         if verbose:
             print(f"Epoch {epoch + 1}, Training Loss: {avg_loss}")
@@ -280,6 +296,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=0, help='Batch size (0: no batch)')
     parser.add_argument('--device', type=str, default="cpu", help='Device (cpu or cuda)')
     parser.add_argument('--workers_num', type=int, default=1, help='Number of workers for data loader')
+    parser.add_argument('--loss_name', type=str, default="bern", help='Loss function (bern, poisson, hinge)')
     parser.add_argument('--output', type=str, help='Output file')
     parser.add_argument('--seed', type=int, default=26042024, help='Seed for random number generator')
     parser.add_argument('--checkpoint', type=int, default=0, help='Save the model for every checkpoint epoch')
@@ -302,4 +319,4 @@ if __name__ == "__main__":
     )
 
     # Run the model
-    run(model, args.lr, args.epoch, args.output, args.output + ".loss", args.checkpoint, verbose=True)
+    run(model, args.lr, args.epoch, args.loss_name, args.output, args.output + ".loss", args.checkpoint, verbose=True)
