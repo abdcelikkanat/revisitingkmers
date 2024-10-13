@@ -102,7 +102,7 @@ class PairDataset(Dataset):
 
 
 class NonLinearModel(torch.nn.Module):
-    def __init__(self, k, device=torch.device("cpu"), verbose=False, seed=0):
+    def __init__(self, k, dim=256, device=torch.device("cpu"), verbose=False, seed=0):
         super(NonLinearModel, self).__init__()
 
         # Set the parameters
@@ -111,6 +111,7 @@ class NonLinearModel(torch.nn.Module):
 
         # Define the letters, k-mer size, and the base complement
         self.__k = k
+        self.__dim = dim
         self.__letters = ['A', 'C', 'G', 'T']
         self.__kmer2id = {''.join(kmer): i for i, kmer in enumerate(itertools.product(self.__letters, repeat=self.__k))}
         self.__kmers_num = len(self.__kmer2id)
@@ -123,11 +124,7 @@ class NonLinearModel(torch.nn.Module):
         self.batch1 = torch.nn.BatchNorm1d(512, dtype=torch.float, device=self.__device)
         self.activation1 = torch.nn.Sigmoid()
         self.dropout1 = torch.nn.Dropout(0.2)
-        self.linear2 = torch.nn.Linear(512, 256, dtype=torch.float, device=self.__device)
-        self.batch2 = torch.nn.BatchNorm1d(128, dtype=torch.float, device=self.__device)
-        self.activation2 = torch.nn.Sigmoid()
-        self.dropout2 = torch.nn.Dropout(0.2)
-        self.linear3 = torch.nn.Linear(128, 64, dtype=torch.float, device=self.__device)
+        self.linear2 = torch.nn.Linear(512, self.__dim, dtype=torch.float, device=self.__device)
 
         self.bce_loss = torch.nn.BCELoss()
 
@@ -138,10 +135,6 @@ class NonLinearModel(torch.nn.Module):
         output = self.activation1(output)
         output = self.dropout1(output)
         output = self.linear2(output)
-        # output = self.batch2(output)
-        # output = self.activation2(output)
-        # # output = self.dropout2(output)
-        # output = self.linear3(output)
 
         return output
 
@@ -153,6 +146,9 @@ class NonLinearModel(torch.nn.Module):
 
     def get_k(self):
         return self.__k
+
+    def get_dim(self):
+        return self.__dim
 
     def get_device(self):
         return self.__device
@@ -180,14 +176,30 @@ class NonLinearModel(torch.nn.Module):
 
         return embs
 
-def loss_func(left_embeddings, right_embeddings, labels):
+def loss_func(left_embeddings, right_embeddings, labels, name="bern"):
 
-    p = torch.exp(-torch.norm(left_embeddings - right_embeddings, p=2, dim=1)**2 )
+    if name == "bern":
+        p = torch.exp(-torch.norm(left_embeddings - right_embeddings, p=2, dim=1)**2 )
 
-    return torch.nn.functional.binary_cross_entropy(p, labels, reduction='mean')
+        return torch.nn.functional.binary_cross_entropy(p, labels, reduction='mean')
+
+    elif name == "poisson":
+
+        log_lambda = -torch.norm(left_embeddings - right_embeddings, p=2, dim=1)**2
+
+        return torch.mean(-(labels * log_lambda) + torch.exp(log_lambda))
+
+    elif name == "hinge":
+
+        d = torch.norm(left_embeddings - right_embeddings, p=2, dim=1)
+        return torch.mean(labels * (d**2) + (1 - labels) * torch.nn.functional.relu(1 - d)**2)
+
+    else:
+
+        raise ValueError(f"Unknown loss function: {name}")
 
 
-def single_epoch(model, loss_func, optimizer, training_loader):
+def single_epoch(model, loss_func, optimizer, training_loader, loss_name="bern"):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     epoch_loss = 0.
@@ -204,7 +216,7 @@ def single_epoch(model, loss_func, optimizer, training_loader):
         left_output, right_output = model(left_kmer_profile, right_kmer_profile)
 
         # Compute the loss and backpropagate
-        batch_loss = loss_func(left_output, right_output, labels)
+        batch_loss = loss_func(left_output, right_output, labels, name=loss_name)
         batch_loss.backward()
 
         # Update the model parameters
@@ -218,7 +230,7 @@ def single_epoch(model, loss_func, optimizer, training_loader):
     return epoch_loss / len(training_loader)
 
 
-def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=None, verbose=True):
+def run(model, learning_rate, epoch_num, loss_name="bern", model_save_path=None, loss_file_path=None, checkpoint=0, verbose=True):
 
     if torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model)
@@ -239,7 +251,7 @@ def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=No
 
         # Make sure gradient tracking is on, and do a pass over the data
         model.train(True)
-        avg_loss = single_epoch(model, loss_func, optimizer, training_loader)
+        avg_loss = single_epoch(model, loss_func, optimizer, training_loader, loss_name)
 
         if verbose:
             print(f"Epoch {epoch + 1}, Training Loss: {avg_loss}")
@@ -248,21 +260,24 @@ def run(model, learning_rate, epoch_num, model_save_path=None, loss_file_path=No
             writer.add_scalar('Loss/train', avg_loss, epoch + 1)
             writer.flush()
 
-        if (epoch + 1) % 10 == 0:
-            if model_save_path is not None:
+        if model_save_path is not None and checkpoint > 0 and (epoch + 1) % checkpoint == 0:
 
-                # model_save_path contains the substring epoch=ID, so change the ID to the current epoch
-                temp_model_save_path = re.sub('epoch.*_LR', f"epoch={epoch + 1}_LR", model_save_path)
+            # model_save_path contains the substring epoch=ID, so change the ID to the current epoch
+            temp_model_save_path = re.sub('epoch.*_LR', f"epoch={epoch + 1}_LR", model_save_path)
 
-                torch.save([{'k': model.get_k(), 'device': model.get_device()}, model.state_dict()], temp_model_save_path)
-                if verbose:
-                    print(f"Model is saving.")
-                    print(f"\t- Target path: {temp_model_save_path}")
+            torch.save([{'k': model.get_k(), 'device': model.get_device()}, model.state_dict()], temp_model_save_path)
+            if verbose:
+                print(f"Model is saving.")
+                print(f"\t- Target path: {temp_model_save_path}")
 
     writer.close()
 
     if model_save_path is not None:
-        torch.save([{'k': model.get_k(), 'device': model.get_device()},model.state_dict()], model_save_path)
+        # If the model is a DataParallel object, then save the model.module
+        if isinstance(model, torch.nn.DataParallel):
+            model = model.module
+
+        torch.save([{'k': model.get_k(), 'dim': model.get_dim(), 'device': model.get_device()}, model.state_dict()], model_save_path)
 
         if verbose:
             print(f"Model is saving.")
@@ -273,6 +288,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate clustering')
     parser.add_argument('--input', type=str, help='Input sequence file')
     parser.add_argument('--k', type=int, default=2, help='k value')
+    parser.add_argument('--dim', type=int, default=256, help='dimension value')
     parser.add_argument('--neg_sample_per_pos', type=int, default=1000, help='Negative sample ratio')
     parser.add_argument('--max_read_num', type=int, default=10000, help='Maximum number of reads to get from the file')
     parser.add_argument('--epoch', type=int, default=1000, help='Epoch number')
@@ -280,13 +296,15 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=0, help='Batch size (0: no batch)')
     parser.add_argument('--device', type=str, default="cpu", help='Device (cpu or cuda)')
     parser.add_argument('--workers_num', type=int, default=1, help='Number of workers for data loader')
+    parser.add_argument('--loss_name', type=str, default="bern", help='Loss function (bern, poisson, hinge)')
     parser.add_argument('--output', type=str, help='Output file')
     parser.add_argument('--seed', type=int, default=26042024, help='Seed for random number generator')
+    parser.add_argument('--checkpoint', type=int, default=0, help='Save the model for every checkpoint epoch')
     args = parser.parse_args()
 
     # Define the model
     model = NonLinearModel(
-        k=args.k, device=torch.device(args.device), verbose=True, seed=args.seed
+        k=args.k, dim=args.dim, device=torch.device(args.device), verbose=True, seed=args.seed
     )
 
     # Read the dataset
@@ -301,4 +319,4 @@ if __name__ == "__main__":
     )
 
     # Run the model
-    run(model, args.lr, args.epoch, args.output, args.output + ".loss", verbose=True)
+    run(model, args.lr, args.epoch, args.loss_name, args.output, args.output + ".loss", args.checkpoint, verbose=True)

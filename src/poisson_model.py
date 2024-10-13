@@ -1,23 +1,17 @@
 import torch
 import math
-import time
-import sys
 import random
-import pickle as pkl
 import itertools
-import matplotlib.pyplot as plt
 import numpy as np
-from multiprocessing import Process, Pool, Array, Manager
-from functools import partial
 import argparse
 
 
-class LinearModel(torch.nn.Module):
+class PoissonModel(torch.nn.Module):
 
     def __init__(self,  k, dim=2, lr=0.1, epoch_num=100, batch_size = 1000,
                  device=torch.device("cpu"), verbose=False, seed=0):
 
-        super(LinearModel, self).__init__()
+        super(PoissonModel, self).__init__()
 
         self.__seed = seed
         self.__k = k
@@ -177,7 +171,7 @@ class LinearModel(torch.nn.Module):
 
         torch.save([kwargs, self.state_dict()], file_path)
 
-    def get_emb(self, sequences):
+    def read2emb(self, sequences):
 
         embeddings = []
         for sequence in sequences:
@@ -192,7 +186,6 @@ class LinearModel(torch.nn.Module):
             kmer_profile = kmer_profile / torch.norm(kmer_profile, p=1)
 
             emb = kmer_profile @ self.__embs
-            # emb = emb / (len(sequence) - self.__k + 1)
             embeddings.append(emb.detach().numpy())
 
         return np.asarray(embeddings)
@@ -212,15 +205,15 @@ if __name__ == "__main__":
     parser.add_argument('--output', type=str, help='Output file')
     args = parser.parse_args()
 
-    kmer2emb = KMer2Emb(
+    pm = PoissonModel(
         k=args.k, dim=args.dim,
         lr=args.lr, epoch_num=args.epoch, batch_size=args.batch_size,
         device=torch.device(args.device), verbose=True, seed=args.seed
     )
-    loss = kmer2emb.learn(file_path=args.input, window_size=args.w, read_sample_size=args.read_sample_size)
+    loss = pm.learn(file_path=args.input, window_size=args.w, read_sample_size=args.read_sample_size)
 
     # Save the model
-    kmer2emb.save(args.output)
+    pm.save(args.output)
 
     # Save the loss
     with open(args.output + ".loss", 'w') as f:
