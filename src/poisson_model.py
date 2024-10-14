@@ -85,6 +85,7 @@ class PoissonModel(torch.nn.Module):
                                     continue
                                 context_kmer_id = self.__kmer2id[read[j:j+self.__k]]
 
+                                # In order not to count pairs twice, just take the upper triangular matrix
                                 if center_kmer_id <= context_kmer_id:
                                     # Update the counts
                                     counts[center_kmer_id, context_kmer_id] += 1
@@ -96,7 +97,7 @@ class PoissonModel(torch.nn.Module):
 
                 line_id += 1
 
-        # Add the upper triangular matrix to the lower triangular matrix
+        # Return the average counts per read
         return counts[np.triu_indices(4**self.__k, k=1)] / (2*read_sample_size)
 
     def __compute_loss(self, pairs, counts):
