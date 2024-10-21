@@ -1,27 +1,46 @@
 # Revisiting K-mer Profile for Effective and Scalable Genome Representation Learning
-This is the repository for the project entitled "Revisiting K-mer Profile for Effective and Scalable Genome Representation Learning"
 
-+ In order to get the detailed instructions to run the models, please type
+### Overview
+This project explores effective and scalable genome representation learning approaches relying on the k-mer features for the metagenomics binning task.
+
+### Installation
+1. Clone this repository:
+```
+git clone https://github.com/abdcelikkanat/revisitingkmers.git
+cd revisitingkmers
+```
+2. Install dependencies: Make sure you have Python 3.8 installed. You can install the required Python packages using ```pip```:
+```
+pip install -r requirements.txt
+```
+3. Install ```gdown``` (if you don't already have it) for downloading the datasets:
+```
+pip install gdown
+```
+
+### Datasets
+To download and prepare the training dataset, run the following commands:
+```
+gdown 1p59ch_MO-9DXh3LUIvorllPJGLEAwsUp
+unzip dnabert-s_train.zip
+```
+
+To download the evaluation datasets, use the following commands:
+```
+gdown 1I44T2alXrtXPZrhkuca6QP3tFHxDW98c
+unzip dnabert-s_eval.zip
+```
+
+### Usage
+To view the detailed usage instructions for each model, you can use the --help flag:
+
+Poisson Model
 ```
 python poisson_model.py --help
 ```
+Nonlinear Model
 ```
 python nonlinear.py --help
-```
-
-+ As their names suggest, poisson_model.py is for the poisson model and nonlinear.py is for the nonlinear model.
-
-
-+ The training datasets can be obtained by running the following command:
-```
-gdown 1p59ch_MO-9DXh3LUIvorllPJGLEAwsUp # pip install gdown
-unzip dnabert-s_train.zip  # unzip the data
-```
-
-+ For the evaluation, please use the following command to get the data:
-```
-gdown 1I44T2alXrtXPZrhkuca6QP3tFHxDW98c # pip install gdown
-unzip dnabert-s_eval.zip  # unzip the data
 ```
 
 ### Citation
